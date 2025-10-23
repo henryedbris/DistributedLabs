@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/rpc"
 	"os"
+
 	"uk.ac.bris.cs/solutions/distributed2/secretstrings/stubs"
 )
 
@@ -17,7 +18,7 @@ func makeCall(client *rpc.Client, message string) {
 }
 
 func main() {
-	server := flag.String("server", "127.0.0.1:8030", "IP:port string to connect to as server")
+	server := flag.String("server", "172.31.19.31:8030", "IP:port string to connect to as server")
 	flag.Parse()
 	client, err := rpc.Dial("tcp", *server)
 	if err != nil {
