@@ -1,24 +1,28 @@
 package main
-import ("errors"
+
+import (
+	"errors"
 	"flag"
 	"fmt"
-	"net"
-	"time"
 	"math/rand"
-	"secretstrings/stubs"
-	"net/rpc")
+	"net"
+	"net/rpc"
+	"time"
+
+	"uk.ac.bris.cs/solutions/distributed2/secretstrings/stubs"
+)
 
 /** Super-Secret `reversing a string' method we can't allow clients to see. **/
 func ReverseString(s string, i int) string {
-    time.Sleep(time.Duration(rand.Intn(i))* time.Second)
-    runes := []rune(s)
-    for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-        runes[i], runes[j] = runes[j], runes[i]
-    }
-    return string(runes)
+	time.Sleep(time.Duration(rand.Intn(i)) * time.Second)
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
 }
 
-type SecretStringOperations struct {}
+type SecretStringOperations struct{}
 
 func (s *SecretStringOperations) Reverse(req stubs.Request, res *stubs.Response) (err error) {
 	if req.Message == "" {
@@ -26,7 +30,7 @@ func (s *SecretStringOperations) Reverse(req stubs.Request, res *stubs.Response)
 		return
 	}
 
-	fmt.Println("Got Message: "+req.Message)
+	fmt.Println("Got Message: " + req.Message)
 	res.Message = ReverseString(req.Message, 10)
 	return
 }
@@ -41,13 +45,15 @@ func (s *SecretStringOperations) FastReverse(req stubs.Request, res *stubs.Respo
 	return
 }
 
-
-func main(){
-	pAddr := flag.String("port","8030","Port to listen on")
+func main() {
+	pAddr := flag.String("port", "8030", "Port to listen on")
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 	rpc.Register(&SecretStringOperations{})
-	listener, _ := net.Listen("tcp", ":"+*pAddr)
+	listener, err := net.Listen("tcp", ":"+*pAddr)
+	if err != nil {
+		panic(err)
+	}
 	defer listener.Close()
 	rpc.Accept(listener)
 }
