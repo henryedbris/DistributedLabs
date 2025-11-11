@@ -6,14 +6,14 @@ import (
 	"flag"
 	"net"
 	"net/rpc"
-	//"sync"
+	"sync"
 )
 
 type GameState struct {
-	//Lock   sync.Mutex
-	//World  [][]uint8
-	//Height int
-	//Width  int
+	Lock   sync.Mutex
+	World  [][]uint8
+	Height int
+	Width  int
 }
 
 func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]uint8) {
@@ -66,11 +66,11 @@ func calculateAliveCells(imgHeight int, imgWidth int, world [][]byte) []util.Cel
 	return aliveCells
 }
 
-func (g *GameState) HandleAlive(req stubs.CellRequest) {
-	if req.Flag {
-
-	}
-}
+//func (g *GameState) HandleAlive(req stubs.CellRequest) {
+//	if req.Flag {
+//
+//	}
+//}
 
 func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
 	currentWorld := make([][]uint8, imgWidth)
@@ -85,18 +85,19 @@ func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
 	return currentWorld
 }
 
-func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) {
+func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) error {
 	currentWorld := makeWorld(req.ImgHeight, req.ImgWidth, req.Message)
 	for i := 0; i < req.Turns; i++ {
 		nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, currentWorld)
 		updateState(req.ImgHeight, req.ImgWidth, currentWorld, nextWorld)
 		currentWorld, nextWorld = nextWorld, currentWorld
-		//g.Lock.Lock()
-		//g.World = currentWorld
-		//g.Lock.Unlock()
+
+		g.Lock.Lock()
+		g.World = currentWorld
+		g.Lock.Unlock()
 	}
-	res.Message = currentWorld
-	return
+	res.Message = g.World
+	return nil
 }
 
 func main() {
