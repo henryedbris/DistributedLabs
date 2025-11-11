@@ -2,6 +2,7 @@ package stubs
 
 type Response struct {
 	Message [][]uint8
+	Cells   int
 }
 
 type Request struct {
@@ -9,4 +10,8 @@ type Request struct {
 	ImgHeight int
 	ImgWidth  int
 	Turns     int
+}
+
+type CellRequest struct {
+	Flag bool
 }

@@ -2,12 +2,19 @@ package main
 
 import (
 	"Distributedgol/stubs"
+	"Distributedgol/util"
 	"flag"
 	"net"
 	"net/rpc"
+	"sync"
 )
 
-type GameServer struct{}
+type GameState struct {
+	Lock   sync.Mutex
+	World  [][]uint8
+	Height int
+	Width  int
+}
 
 func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]uint8) {
 	for y := 0; y < height; y++ {
@@ -45,34 +52,57 @@ func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]ui
 			}
 		}
 	}
-
 }
 
-func (g *GameServer) HandleState(req stubs.Request, res *stubs.Response) error {
-	currentWorld := make([][]uint8, req.ImgWidth)
-	nextWorld := make([][]uint8, req.ImgWidth)
-	for i := range currentWorld {
-		currentWorld[i] = make([]uint8, req.ImgHeight)
-		nextWorld[i] = make([]uint8, req.ImgWidth)
-	}
-	for y := 0; y < req.ImgHeight; y++ {
-		for x := 0; x < req.ImgWidth; x++ {
-			currentWorld[y][x] = req.Message[y][x]
+func calculateAliveCells(imgHeight int, imgWidth int, world [][]byte) []util.Cell {
+	var aliveCells []util.Cell
+	for y := 0; y < imgHeight; y++ {
+		for x := 0; x < imgWidth; x++ {
+			if world[y][x] == 255 {
+				aliveCells = append(aliveCells, util.Cell{X: x, Y: y})
+			}
 		}
 	}
+	return aliveCells
+}
 
+func (g *GameState) HandleAlive(req stubs.CellRequest) {
+	if req.Flag {
+
+	}
+}
+
+func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
+	currentWorld := make([][]uint8, imgWidth)
+	for i := range currentWorld {
+		currentWorld[i] = make([]uint8, imgHeight)
+	}
+	for y := 0; y < imgHeight; y++ {
+		for x := 0; x < imgWidth; x++ {
+			currentWorld[y][x] = world[y][x]
+		}
+	}
+	return currentWorld
+}
+
+func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) {
+	currentWorld := makeWorld(req.ImgHeight, req.ImgWidth, req.Message)
 	for i := 0; i < req.Turns; i++ {
+		nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, currentWorld)
 		updateState(req.ImgHeight, req.ImgWidth, currentWorld, nextWorld)
 		currentWorld, nextWorld = nextWorld, currentWorld
+		g.Lock.Lock()
+		g.World = currentWorld
+		g.Lock.Unlock()
 	}
 	res.Message = currentWorld
-	return nil
+	return
 }
 
 func main() {
 	pAddr := flag.String("port", "8030", "Port to listen on")
 	flag.Parse()
-	rpc.Register(&GameServer{})
+	rpc.Register(&GameState{})
 	listener, err := net.Listen("tcp", ":"+*pAddr)
 	if err != nil {
 		panic(err)
