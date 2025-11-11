@@ -14,12 +14,18 @@ type GameState struct {
 	World  [][]uint8
 	Height int
 	Width  int
+	Turn   int
 }
 
-func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]uint8) {
+func updateState(height int, width int, currentWorld [][]uint8, out chan [][]uint8, g *GameState) {
+
+	nextWorld := make([][]uint8, height)
+	for i := 0; i < height; i++ {
+		nextWorld[i] = make([]uint8, width)
+	}
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-
 			var sum int
 			for dx := -1; dx <= 1; dx++ {
 				for dy := -1; dy <= 1; dy++ {
@@ -52,6 +58,10 @@ func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]ui
 			}
 		}
 	}
+	g.Lock.Lock()
+	g.World = nextWorld
+	g.Lock.Unlock()
+	out <- nextWorld
 }
 
 func calculateAliveCells(imgHeight int, imgWidth int, world [][]byte) []util.Cell {
@@ -66,16 +76,19 @@ func calculateAliveCells(imgHeight int, imgWidth int, world [][]byte) []util.Cel
 	return aliveCells
 }
 
-//func (g *GameState) HandleAlive(req stubs.CellRequest) {
-//	if req.Flag {
-//
-//	}
-//}
+func (g *GameState) HandleAlive(req stubs.CellRequest, res *stubs.Response) error {
+	g.Lock.Lock()
+	defer g.Lock.Unlock()
+	aliveCells := len(calculateAliveCells(g.Height, g.Width, g.World))
+	res.Cells = aliveCells
+	res.Turn = g.Turn
+	return nil
+}
 
 func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
-	currentWorld := make([][]uint8, imgWidth)
+	currentWorld := make([][]uint8, imgHeight)
 	for i := range currentWorld {
-		currentWorld[i] = make([]uint8, imgHeight)
+		currentWorld[i] = make([]uint8, imgWidth)
 	}
 	for y := 0; y < imgHeight; y++ {
 		for x := 0; x < imgWidth; x++ {
@@ -86,22 +99,33 @@ func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
 }
 
 func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) error {
+	g.Lock.Lock()
+	g.Height = req.ImgHeight
+	g.Width = req.ImgWidth
+	g.Lock.Unlock()
 	currentWorld := makeWorld(req.ImgHeight, req.ImgWidth, req.Message)
+	channel := make(chan [][]uint8)
+	turn := 0
 	for i := 0; i < req.Turns; i++ {
 		nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, currentWorld)
-		updateState(req.ImgHeight, req.ImgWidth, currentWorld, nextWorld)
+		go updateState(req.ImgHeight, req.ImgWidth, currentWorld, channel, g)
+		nextWorld = <-channel
 		currentWorld, nextWorld = nextWorld, currentWorld
-
+		turn += 1
 		g.Lock.Lock()
-		g.World = currentWorld
+		g.Turn = turn
 		g.Lock.Unlock()
 	}
+	g.Lock.Lock()
+	g.World = currentWorld
+	g.Lock.Unlock()
 	res.Message = g.World
+	res.Turn = turn
 	return nil
 }
 
 func main() {
-	pAddr := flag.String("port", "8030", "Port to listen on")
+	pAddr := flag.String("port", "8020", "Port to listen on")
 	flag.Parse()
 	rpc.Register(&GameState{})
 	listener, err := net.Listen("tcp", ":"+*pAddr)

@@ -3,6 +3,7 @@ package stubs
 type Response struct {
 	Message [][]uint8
 	Cells   int
+	Turn    int
 }
 
 type Request struct {
