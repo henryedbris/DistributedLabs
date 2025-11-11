@@ -6,14 +6,14 @@ import (
 	"flag"
 	"net"
 	"net/rpc"
-	"sync"
+	//"sync"
 )
 
 type GameState struct {
-	Lock   sync.Mutex
-	World  [][]uint8
-	Height int
-	Width  int
+	//Lock   sync.Mutex
+	//World  [][]uint8
+	//Height int
+	//Width  int
 }
 
 func updateState(height int, width int, currentWorld [][]uint8, nextWorld [][]uint8) {
@@ -91,9 +91,9 @@ func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) {
 		nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, currentWorld)
 		updateState(req.ImgHeight, req.ImgWidth, currentWorld, nextWorld)
 		currentWorld, nextWorld = nextWorld, currentWorld
-		g.Lock.Lock()
-		g.World = currentWorld
-		g.Lock.Unlock()
+		//g.Lock.Lock()
+		//g.World = currentWorld
+		//g.Lock.Unlock()
 	}
 	res.Message = currentWorld
 	return
