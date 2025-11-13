@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"uk.ac.bris.cs/gameoflife/stubs"
-	"uk.ac.bris.cs/gameoflife/util"
+	"Distributedgol/stubs"
+	"Distributedgol/gameoflife/util"
 )
 
 type GameState struct {
