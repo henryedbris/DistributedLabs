@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"Distributedgol/stubs"
-	"Distributedgol/gameoflife/util"
+	"Distributedgol/util"
 )
 
 type GameState struct {
