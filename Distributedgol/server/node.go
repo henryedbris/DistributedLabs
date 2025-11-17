@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"Distributedgol/stubs"
+	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
 type GameState struct {
@@ -91,9 +91,9 @@ func (g *GameState) HandleQuit(req stubs.QuitRequest, response *stubs.Response) 
 }
 
 func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) error {
-	nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, req.Message)
+	nextWorld := makeWorld(req.StartY, req.EndY, req.Message)
 	out := make(chan [][]uint8)
-	go updateState(req.ImgHeight, req.ImgWidth, req.Message, req.StartY, req.ImgHeight, out)
+	go updateState(req.ImgHeight, req.ImgWidth, req.Message, req.StartY, req.EndY, out)
 	nextWorld = <-out
 	res.Message = nextWorld
 	return nil
