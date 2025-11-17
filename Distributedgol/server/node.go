@@ -1,0 +1,115 @@
+package main
+
+import (
+	"flag"
+	"net"
+	"net/rpc"
+	"os"
+	"sync"
+	"time"
+
+	"uk.ac.bris.cs/gameoflife/stubs"
+)
+
+type GameState struct {
+	Lock   sync.Mutex
+	World  [][]uint8
+	Height int
+	Width  int
+	Turn   int
+	Paused bool
+	Quit   chan bool
+}
+
+func updateState(height int, width int, currentWorld [][]uint8, startY int, endY int, out chan [][]uint8) {
+	nextWorldHeight := endY - startY
+	nextWorld := make([][]uint8, nextWorldHeight)
+	for i := 0; i < nextWorldHeight; i++ {
+		nextWorld[i] = make([]uint8, width)
+	}
+
+	for y := startY; y < endY; y++ {
+		for x := 0; x < width; x++ {
+			var sum int
+			for dx := -1; dx <= 1; dx++ {
+				for dy := -1; dy <= 1; dy++ {
+					if dx == 0 && dy == 0 {
+						continue
+					}
+					ny := (y + dy + height) % height
+					nx := (x + dx + width) % width
+					if currentWorld[ny][nx] == 255 {
+						sum++
+					}
+				}
+			}
+
+			if currentWorld[y][x] == 255 { // if cell is alive
+				if sum < 2 { // flip cell if it has <2 alive neighbours
+					nextWorld[y-startY][x] = 0
+
+				} else if sum == 2 || sum == 3 { // cell stays alive if it has 2/3 neighbours
+					nextWorld[y-startY][x] = 255
+				} else { // flip cell if it has >3 neighbours
+					nextWorld[y-startY][x] = 0
+
+				}
+			} else { // if cell is dead
+				if sum == 3 { // flip cell if it has 3 neighbours
+					nextWorld[y-startY][x] = 255
+
+				} else {
+					nextWorld[y-startY][x] = 0
+				}
+
+			}
+		}
+	}
+	out <- nextWorld
+}
+
+func makeWorld(imgHeight int, imgWidth int, world [][]byte) [][]uint8 {
+	currentWorld := make([][]uint8, imgHeight)
+	for i := range currentWorld {
+		currentWorld[i] = make([]uint8, imgWidth)
+	}
+	for y := 0; y < imgHeight; y++ {
+		for x := 0; x < imgWidth; x++ {
+			currentWorld[y][x] = world[y][x]
+		}
+	}
+	return currentWorld
+}
+
+func (g *GameState) HandleQuit(req stubs.QuitRequest, response *stubs.Response) error {
+	go func() {
+		time.Sleep(1 * time.Second)
+		g.Quit <- true
+	}()
+
+	return nil
+}
+
+func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) error {
+	nextWorld := makeWorld(req.ImgHeight, req.ImgWidth, req.Message)
+	out := make(chan [][]uint8)
+	go updateState(req.ImgHeight, req.ImgWidth, req.Message, req.StartY, req.ImgHeight, out)
+	nextWorld = <-out
+	res.Message = nextWorld
+	return nil
+}
+
+func main() {
+	g := &GameState{}
+	g.Quit = make(chan bool)
+	rpc.Register(g)
+	pAddr := flag.String("port", "8030", "Port to listen on")
+	flag.Parse()
+	listener, err := net.Listen("tcp", ":"+*pAddr)
+	if err != nil {
+		panic(err)
+	}
+	go rpc.Accept(listener)
+	<-g.Quit
+	os.Exit(0)
+}
