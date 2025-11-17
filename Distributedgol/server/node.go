@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"uk.ac.bris.cs/gameoflife/stubs"
+	"Distributedgol/stubs"
 )
 
 type GameState struct {
