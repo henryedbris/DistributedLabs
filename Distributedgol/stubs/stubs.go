@@ -5,6 +5,10 @@ var CellHandler = "GameState.HandleAlive"
 var KeyHandler = "GameState.HandleKeyPress"
 var QuitHandler = "GameState.HandleQuit"
 
+var BStateHandler = "Broker.HandleState"
+var BKeyHandler = "Broker.HandleKeyPress"
+var BCellHandler = "Broker.HandleAlive"
+
 type Response struct {
 	Message [][]uint8
 	Cells   int
@@ -17,6 +21,8 @@ type Request struct {
 	ImgHeight int
 	ImgWidth  int
 	Turns     int
+	StartY    int
+	EndY      int
 }
 
 type CellRequest struct {
