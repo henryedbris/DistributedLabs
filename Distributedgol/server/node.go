@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+
 	"net"
 	"net/rpc"
 	"os"
@@ -66,7 +66,7 @@ func updateState(height int, width int, currentWorld [][]uint8, startY int, endY
 			}
 		}
 	}
-	fmt.Println(nextWorld)
+
 	return nextWorld
 }
 
@@ -85,7 +85,7 @@ func getWorkerSlice(height, threads, id int) (int, int) {
 
 	start := id * rows
 	end := start + rows
-	fmt.Println(start, end, threads)
+
 
 	if id == threads-1 { //give last worker leftover rows
 		end += extraRows
@@ -107,7 +107,7 @@ func (g *GameState) HandleState(req stubs.Request, res *stubs.Response) error {
 		channels[i] = make(chan [][]uint8)
 	}
 	height := req.EndY - req.StartY
-	fmt.Println(height)
+
 	for i := 0; i < threads; i++ {
 		startY, endY := getWorkerSlice(height, threads, i)
 		go worker(height, req.ImgWidth, req.Message, channels[i], startY, endY)
